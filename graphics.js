@@ -80,11 +80,11 @@ function drawDirectionalArrow(selectedTile=undefined) {
         // horizontal
         let [travelY, travelX] = getTravelDirection();
         if (travelY == 0 && travelX == 1) {
-            selectedTile.style.backgroundImage = 'url("./rightArrow.png")';
+            selectedTile.style.backgroundImage = 'url("./images/rightArrow.png")';
 
         }
         else if (travelY == 1 && travelX == 0) {
-            selectedTile.style.backgroundImage = 'url("./downArrow.png")';
+            selectedTile.style.backgroundImage = 'url("./images/downArrow.png")';
         }
         selectedTile.style.backgroundSize = 'cover';
         // selectedTile.style.color = 'rgb(150, 10, 10)';
