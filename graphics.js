@@ -1,13 +1,9 @@
 import {dims, colorConversions, multipliers, letterPoints, hor, ver, wildcard} from './constants.js';
-import {getBoard, getAllWords, getPrevSelectedTile, setSelectedTile, getSelectedTile, getTravelDirection, changeTravelDirection, setLetter, getInvalidWords, focusBoard, isBoardFocused, unfocusBoard, findMoves, getMoves} from './board.js';
+import {getBoard, getAllWords, getPrevSelectedTile, setSelectedTile, getSelectedTile, getTravelDirection, changeTravelDirection, setLetter, getInvalidWords, focusBoard, isBoardFocused, unfocusBoard, findMoves, getMoves, setBoard} from './board.js';
 import {focusDeck, getDeck, getSelectedDeckTile, isDeckFocused, setDeck, typeDeckLetter, unfocusDeck} from './deck.js';
 import { makePossibleWords } from './algorithms.js';
 
-// directional arrow
-let arrow = document.createElement('img');
-arrow.src = './arrow.png';
-arrow.className = 'arrow';
-document.body.appendChild(arrow);
+
 
 // board
 let board = document.createElement('div');
@@ -16,14 +12,19 @@ board.id = 'board';
 let menu = document.createElement('div');
 menu.id = 'menu';
 
-let showLoader = true;
+
+let showLoader = false;
 toggleLoader();
 
+let apiURL = 'https://api.dictionaryapi.dev/api/v2/entries/en/'
+let hoveredWord;
 
 function initBoard() {
     document.body.addEventListener("keydown", function(event) {
         typeLetters(event);
-    });
+    }); 
+   
+    let boardValues = getBoard();
 
     for (let y=0; y<dims; y++) {
         for (let x=0; x<dims; x++) {
@@ -33,10 +34,13 @@ function initBoard() {
 
             let letter = document.createElement('div');
             letter.className = 'tile-letter';
+            letter.innerHTML = boardValues[y][x];
             tile.appendChild(letter);
 
             let points = document.createElement('div');
             points.className = 'tile-points'
+            points.innerHTML = letterPoints[boardValues[y][x]];
+
             tile.appendChild(points);
 
             // tile colors based on multipliers
@@ -45,11 +49,15 @@ function initBoard() {
             // event listener
             tile.addEventListener("click", () => {
                 resetBackgroundColors();
+                highlightInvalidWords();
 
                 setSelectedTile(y, x);
                 hightlightSelectedTile();
                 focusBoard();
                 unfocusDeck();
+
+                let tile = document.getElementById(`deck-${getSelectedDeckTile()}`);
+                tile.className = ' deck-tile';
             });
 
             
@@ -62,50 +70,53 @@ function initBoard() {
 
 }
 
-function drawDirectionalArrow() {
-    let boardPos = board.getBoundingClientRect();
-    let [boardX, boardY] = [boardPos.x, boardPos.y];
-    let tileWidth = Math.floor(boardPos.width / dims);
+function drawDirectionalArrow(selectedTile=undefined) {
+
+    if (!selectedTile) {
+        selectedTile = document.getElementsByClassName('tile tile-selected');
+    }
     let [y, x] = getSelectedTile();
     if (y != null && x != null) {
-        let [imgX, imgY] = [boardX + x * tileWidth, boardY + y * tileWidth];
         // horizontal
         let [travelY, travelX] = getTravelDirection();
         if (travelY == 0 && travelX == 1) {
-            arrow.style.transform = `rotate(0deg)`;
-            arrow.style.left = `${imgX + tileWidth}px`;
-            arrow.style.top = `${imgY + tileWidth / 4}px`;
+            selectedTile.style.backgroundImage = 'url("./rightArrow.png")';
+
         }
         else if (travelY == 1 && travelX == 0) {
-            arrow.style.transform = `rotate(90deg)`;
-            arrow.style.left = `${imgX + tileWidth / 5}px`;
-            arrow.style.top = `${imgY + tileWidth}px`;
+            selectedTile.style.backgroundImage = 'url("./downArrow.png")';
         }
+        selectedTile.style.backgroundSize = 'cover';
+        // selectedTile.style.color = 'rgb(150, 10, 10)';
     }
 }
 
 function toggleLoader() {
-    if (showLoader == true) {
+    if (showLoader == false) {
+        let definitions = document.getElementById('definitions');
+        if (definitions) {
+            definitions.style.filter = '';
+        }
+
         let loader = document.getElementsByClassName('loading-ring');
         for (let l of loader) {
-            showLoader = false;
             // filter: blur(5px);
             l.style.top = `-100px`;
             l.style.left = `-100px`;
         }
 
     }
-    else if (showLoader == false) {
-        showLoader = true;
-        let menu = document.getElementById('menu');
-        let menuPos = menu.getBoundingClientRect();
-        let [menuX, menuY] = [menuPos.x, menuPos.y];
-        let [menuWidth, menuHeight] = [menuPos.width, menuPos.height];
+    else if (showLoader == true) {
+        let definitions = document.getElementById('definitions');
+        definitions.style.filter = 'blur(3px)';
+        let defPos = definitions.getBoundingClientRect();
+        let [menuX, menuY] = [defPos.x, defPos.y];
+        let [menuWidth, menuHeight] = [defPos.width, defPos.height];
         
         let loader = document.getElementsByClassName('loading-ring');
         for (let l of loader) {
-            l.style.left = `${Math.floor(menuX + menuWidth / 2)}px`;
-            l.style.top = `${Math.floor(menuY + menuHeight / 2)}px`;
+            l.style.left = `${Math.floor(menuX + menuWidth / 2 - 40)}px`;
+            l.style.top = `${Math.floor(menuY + menuHeight / 2 - 40)}px`;
         }
 
     }
@@ -124,7 +135,6 @@ function hightlightSelectedTile() {
     if (y == null || x == null) {
         return;
     }
-
     
     let selectedTile = document.getElementById(`${y}-${x}`);
     selectedTile.className = 'tile tile-selected';
@@ -132,7 +142,8 @@ function hightlightSelectedTile() {
     if (pX == x && pY == y) {
         changeTravelDirection();
     }
-   drawDirectionalArrow();
+   
+   drawDirectionalArrow(selectedTile);
 }
 
 function typeLetters(e) {
@@ -150,16 +161,15 @@ function typeLetters(e) {
     }
 
     if (key == 'return' || key == 'enter') {
-        toggleLoader();
-    $(window).trigger('resize');
+        // document.getElementById('menu').style.filter = 'blur(3px)';
         findMoves();
         updateMoveMenu();
         scrollToMenuTop();
-        toggleLoader();
+        save();
+          
         return;
     }
-
-    
+  
 
     if (isBoardFocused()) {
         if (key == '8' || key == wildcard) {
@@ -261,7 +271,7 @@ function previewPossibleMove(move) {
             tileId = `${move.row + i}-${move.col}`
         }
         let tile = document.getElementById(tileId);
-        tile.style.background = `rgba(0, 255, 0, 0.9)`;
+        tile.style.background = `rgba(0, 225, 0, 0.9)`;
 
         let [tileLetter, tilePoints] = tile.children;
         tileLetter.innerHTML = move.word[i];
@@ -270,6 +280,7 @@ function previewPossibleMove(move) {
 }
 
 function placeWord(move) {
+    let remainingLetters = [...getDeck()];
     for (let i=0; i < move.word.length; i++) {
         if (move.dir == hor) {
             setLetter(move.row, move.col + i, move.word[i]);
@@ -279,25 +290,45 @@ function placeWord(move) {
         }
         // subtract used letters from deck 
         let deck = getDeck();
-        if (deck.includes(move[i])) {
-            setDeck(deck.slice(deck.lastIndexOf(move[i]), 1));
+        if (deck.includes(move.word[i])) {
+            remainingLetters.splice(deck.lastIndexOf(move.word[i]), 1);
+        }
+        else if (deck.includes(wildcard)) {
+            remainingLetters.splice(deck.lastIndexOf(wildcard), 1);
         }
     }
+    // while (remainingLetters.length < 7) {
+    //     remainingLetters.push('');
+    // }
+    // setDeck(remainingLetters);
 }
 
 function initDeck() {
     let deck = document.createElement('div');
     deck.id = 'deck';
+    let deckValues = getDeck();
 
     for (let i=0; i < getDeck().length; i++) {
         let deckTile = document.createElement('div');
         deckTile.className = 'deck-tile';
         deckTile.id = `deck-${i}`;
+        deckTile.innerHTML = deckValues[i];
 
         deckTile.addEventListener('click', () => {
             resetBackgroundColors();
+            highlightInvalidWords();
             focusDeck();
             unfocusBoard();
+
+            let tile = document.getElementById(`deck-${getSelectedDeckTile()}`);
+            tile.className += ' deck-tile-selected';
+
+            let [selectedY, selectedX] = getSelectedTile();
+            if (selectedY == null || selectedX == null) {
+                return;
+            }
+            let selectedTile = document.getElementById(`${selectedY}-${selectedX}`);
+            selectedTile.className = 'tile';
         });
         deck.appendChild(deckTile);
     }
@@ -305,18 +336,21 @@ function initDeck() {
 }
 
 function scrollToMenuTop() {
-    document.getElementById('menu-0').scrollIntoView({ 
-        behavior: 'smooth' 
-      });
+    let top = document.getElementById('menu');
+    if (top) {
+        top.scroll({
+            top: 0,
+            behavior: 'smooth',
+        })
+    }
 }
 
 function updateMoveMenu() {
     menu.innerHTML = '';
     
     let moves = getMoves().reverse();
-    if (moves.length > 300) {
-        moves = moves.slice(0, 300);
-    }
+    moves = moves.slice(0, 300);
+
     for (let i = 0; i < moves.length; i++) {
         let moveItem = document.createElement('div');
         moveItem.className = 'menu-item';
@@ -350,7 +384,7 @@ function updateMoveMenu() {
         let bingo = document.createElement('div');
         bingo.className = 'move-bingo';
         let value = 'F';
-        if (moves[i].lettersPlaced.length == getDeck().length) {
+        if (moves[i].bingo) {
             value = "T";
         }
         bingo.innerHTML = value;
@@ -366,6 +400,21 @@ function updateMoveMenu() {
         moveItem.addEventListener('mouseover', () => {
             highlightInvalidWords();
             previewPossibleMove(moves[i]);
+
+            hoveredWord = moves[i].word;
+            showLoader = true;
+            toggleLoader();
+
+            let word = document.getElementById('def-word');
+            if (word.innerHTML != moves[i].word) {
+                setTimeout(() => {
+                    if (hoveredWord == moves[i].word) {
+                        getDefinition(moves[i].word);
+                    }
+                    showLoader = false;
+                    toggleLoader();
+                }, 2000);
+            }
         });
 
         moveItem.addEventListener('dblclick', () => {
@@ -376,7 +425,29 @@ function updateMoveMenu() {
         menu.appendChild(moveItem);
     }
 
+    // defenition section
+    let definitions = document.createElement('div');
+    definitions.className = 'definitions';
+    definitions.id = 'definitions';
+
+    let word = document.createElement('div');
+    word.id = 'def-word';
+    let phonetic = document.createElement('div');
+    phonetic.id = 'def-phonetic';
+    phonetic.className = 'small-text';
+
+    let definition = document.createElement('div');
+    definition.id = 'def-def';
+
+    definitions.appendChild(word);
+    definitions.appendChild(phonetic);
+    definitions.appendChild(definition);
+
+    menu.appendChild(definitions);
+
+
     document.body.appendChild(menu);
+
 }
 function initMoveMenu() {
     let key = document.createElement('div');
@@ -413,7 +484,121 @@ function initMoveMenu() {
     
 }
 
+function initResetButton() {
+    let reset = document.createElement('button');
+    let msg = document.createElement('p');
+    msg.className = 'reset-msg';
+    msg.innerHTML = 'Refresh page for changes to take affect.';
+
+    reset.innerHTML = 'Reset';
+    reset.className = 'reset';
+    reset.addEventListener('click', () => {
+        setDeck(['', '', '', '', '', '', '']);
+        setBoard([
+            ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+        ]);
+        save();
+    });
+
+    document.body.appendChild(reset);
+    document.body.appendChild(msg);
+}
+
+function loadSaved() {
+    let board = JSON.parse(localStorage.getItem('board'));
+    let deck = JSON.parse(localStorage.getItem('deck'));
+
+    if (board && deck) {
+        setBoard(board);
+        setDeck(deck);
+    }
+}
+function save() {
+    localStorage.setItem('board', JSON.stringify(getBoard()));
+    localStorage.setItem('deck', JSON.stringify(getDeck()));
+}
+  
+
+function getDefinition(newWord) {
+    let word = document.getElementById('def-word');
+    let phonetic = document.getElementById('def-phonetic');
+    let defElement = document.getElementById('def-def');
+
+    fetch(apiURL + newWord)
+    .then(response => response.json())
+    .then((json) => {
+        if (json.length > 1) {
+            json = json[0];
+        }
+
+     
+      
+
+        // no definiton found
+        if ('title' in json) {
+            word.innerHTML = json.title;
+            phonetic.innerHTML = '';
+            defElement.innerHTML = '';
+        }
+        else {
+            if (json.constructor === [].constructor) {
+                json = json[0];
+            }
+            word.innerHTML = json.word;
+            phonetic.innerHTML = '';
+            defElement.innerHTML = '';
+
+            if (json.phonetic) {
+                phonetic.innerHTML = json.phonetic;
+            }
+
+            if ('meanings' in json) {
+                for (let meaning of json.meanings) {
+                    let container = document.createElement('div');
+                    let partOfSpeech = document.createElement('div');
+                    let definition = document.createElement('div');
+                    let example = document.createElement('div');
+    
+                    partOfSpeech.className = 'small-text part-of-speech';
+                    partOfSpeech.innerHTML = meaning.partOfSpeech;
+    
+                    definition.innerHTML = meaning.definitions[0].definition;
+    
+                    example.className = 'small-text';   
+                    if ('example' in meaning.definitions[0]) {
+                        example.innerHTML = meaning.definitions[0].example;
+                    }
+                    
+                    container.appendChild(partOfSpeech);
+                    container.appendChild(definition);
+                    container.appendChild(example);
+                    defElement.appendChild(container);
+    
+                }
+            }
+        }
+    });
+}
+
+loadSaved();
 
 initBoard();
 initMoveMenu();
 initDeck();
+initResetButton();
+
+highlightInvalidWords();

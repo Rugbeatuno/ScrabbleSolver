@@ -54,7 +54,7 @@ body {
     font-size: 4vh;
     font-weight: 500;
 
-    transform: translateY(15%);
+    transform: translateY(20%);
 }
 
 .tile-points {
@@ -68,13 +68,8 @@ body {
 
 .tile-selected {
     filter: brightness(115%);
-    outline: 3px solid rgb(37, 115, 37);
-}
-
-
-
-.arrow {
-    position: absolute;
+    outline: 3px solid rgb(13, 67, 115);
+    /* outline: 3px solid rgb(37, 115, 37); */
 }
 
 
@@ -82,6 +77,8 @@ body {
     grid-column: 2;
     grid-row: 2;
     border-radius: 50px;
+    margin-left: 15px;
+    margin-right: 15px;
 
     display: flex;
     justify-content: center;
@@ -107,7 +104,8 @@ body {
 }
 
 .deck-tile-selected {
-    border-bottom: 5px solid rgb(31, 248, 31);
+  border-bottom: 5px solid rgb(31, 248, 31);
+  
 }
 
 #menu {
@@ -119,6 +117,7 @@ body {
 
     max-height: 80vh;
     margin-top: 25px;
+    /* margin-right: 15px; */
 
     -ms-overflow-style: none;  /* Internet Explorer 10+ */
     scrollbar-width: none;  /* Firefox */
@@ -145,6 +144,15 @@ body {
     height: 50px;
     width: auto;
 
+}
+
+.definitions {
+  position: sticky;
+  bottom: 0px;
+  background-color: #22222d;
+  width: 100%;
+  height: 25%;
+  color: white;
 }
 
 .menu-item:hover {
@@ -175,6 +183,7 @@ body {
     position: absolute;
     width: 80px;
     height: 80px;
+    z-index: 5;
   }
   .loading-ring div {
     box-sizing: border-box;
@@ -205,4 +214,51 @@ body {
       transform: rotate(360deg);
     }
   }
-  
+
+
+.reset {
+  width: 100px;
+  position: absolute;
+  bottom: -25px;
+}
+
+.reset-msg {
+  width: auto;
+  position: absolute;
+  bottom: -40px;
+  color: white;
+  left: 125px;
+}
+
+#definitions {
+  padding: 15px;
+  overflow: auto;
+}
+
+#def-word {
+  position: sticky;
+  bottom: 0px;
+  font-weight: 400;
+  font-size: 4vh;
+
+}
+
+#def-phonetic {
+  margin-left: 15px;
+  margin-bottom: 15px;
+}
+
+#def-def {
+  margin-left: 25%;
+  margin-top: -5%;
+}
+
+.part-of-speech {
+  margin-left: -10%;
+}
+
+
+.small-text {
+  font-size: 1.75vh;
+  color: #8b8b93;
+}

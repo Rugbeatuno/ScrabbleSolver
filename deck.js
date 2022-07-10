@@ -5,13 +5,26 @@ let isFocused = false;
 
 
 export function getDeck() {
+    // while (deck.includes('')) {
+    //     deck.splice(deck.indexOf(''), 1);
+    // }
+    // while (deck.length < 7) {
+    //     deck.push('');
+    // }
     return deck;
 }
-export function setDeck(deck) {
-    deck = deck;
+export function setDeck(d) {
+    deck = d;
+    selectedTile = deck.indexOf('');
 }
 
 export function getSelectedDeckTile() {
+    if (selectedTile < 0) {
+        if (deck.indexOf('')) {
+            selectedTile = deck.indexOf('');
+        }
+        selectedTile = deck.length - 1;
+    }
     return selectedTile; 
 }
 
