@@ -69,7 +69,7 @@ export const trippleWordScore = 2;
 export const doubleLetterScore = 3;
 export const trippleLetterScore = 4;
 
-export const multipliers = [
+export let multipliers1 = [
     [2, 0, 0, 3, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 2],
     [0, 1, 0, 0, 0, 4, 0, 0, 0, 4, 0, 0, 0, 1, 0],
     [0, 0, 1, 0, 0, 0, 3, 0, 3, 0, 0, 0, 1, 0, 0],
@@ -87,12 +87,38 @@ export const multipliers = [
     [2, 0, 0, 3, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 2],
 ]
 
+export let multipliers2 = [
+    [0, 0, 0, 2, 0, 0, 4, 0, 4, 0, 0, 2, 0, 0, 0],
+    [0, 0, 3, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3, 0, 0],
+    [0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 3, 0, 0, 3, 0],
+    [2, 0, 0, 4, 0, 0, 0, 1, 0, 0, 0, 4, 0, 0, 2],
+    [0, 0, 3, 0, 0, 0, 3, 0, 3, 0, 0, 0, 3, 0, 0],
+    [0, 1, 0, 0, 0, 4, 0, 0, 0, 4, 0, 0, 0, 1, 0],
+    [4, 0, 0, 0, 3, 0, 0, 0, 0, 0, 3, 0, 0, 0, 4],
+    [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+    [4, 0, 0, 0, 3, 0, 0, 0, 0, 0, 3, 0, 0, 0, 4],
+    [0, 1, 0, 0, 0, 4, 0, 0, 0, 4, 0, 0, 0, 1, 0],
+    [0, 0, 3, 0, 0, 0, 3, 0, 3, 0, 0, 0, 3, 0, 0],
+    [2, 0, 0, 4, 0, 0, 0, 1, 0, 0, 0, 4, 0, 0, 2],
+    [0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 3, 0, 0, 3, 0],
+    [0, 0, 3, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3, 0, 0],
+    [0, 0, 0, 2, 0, 0, 4, 0, 4, 0, 0, 2, 0, 0, 0],
+]
+
+export let activeMultipliers = multipliers1;
+
 export const colorConversions = {
     0: '#C0C0C0',
-    2: '#FFA500',
-    4: '#A878A8',
     1: '#FFC0CB',
-    3: '#ADD8E6'
+    2: '#FFA500',
+    3: '#ADD8E6',
+    4: '#A878A8',
+}
+export const multiplierConversions = {
+    1: 'DW',
+    2: 'TW',
+    3: 'DL',
+    4: 'TL',
 }
 
 export const dims = 15;
@@ -127,4 +153,21 @@ export const scrabbleWordsLength = {
     13: scrabbleWords.filter(word => word.length == 13),
     14: scrabbleWords.filter(word => word.length == 14),
     15: scrabbleWords.filter(word => word.length == 15),
+}
+
+
+function arrayEquals(a, b) {
+    return Array.isArray(a) &&
+      Array.isArray(b) &&
+      a.length === b.length &&
+      a.every((val, index) => val === b[index]);
+  }
+
+export function cycleMultipliers() {
+    if (arrayEquals(activeMultipliers, multipliers1)) {
+        activeMultipliers = multipliers2;
+    }
+    else {
+        activeMultipliers = multipliers1;
+    }
 }

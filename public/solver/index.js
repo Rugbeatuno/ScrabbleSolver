@@ -471,7 +471,7 @@ function findAllWords() {
                 let currentRow = row;
                 let shiftedTiles = 0;
                 let startingPositions = [];
-                while (currentCol >= 0 && currentRow >= 0 && shiftedTiles < rack.length) {
+                while (currentCol >= 0 && currentRow >= 0 && shiftedTiles <= rack.length) {
                     if (isEmpty([currentRow, currentCol])) {
                         startingPositions.push([currentRow, currentCol]);
                     } 

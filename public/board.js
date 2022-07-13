@@ -1,5 +1,5 @@
-import {dims, doubleLetterScore, doubleWordScore, hor, letterPoints, multipliers, normal, scrabbleWords, scrabbleWordsLength, trippleLetterScore, trippleWordScore, ver, wildcard,} from './constants.js';
-import {getDeck, getLettersInDeck} from './deck.js';
+import {dims, doubleLetterScore, doubleWordScore, hor, letterPoints, activeMultipliers, trippleLetterScore, trippleWordScore, ver} from './constants.js';
+import {getDeck} from './deck.js';
 import {computeMoves} from './solver/index.js';
 import {lookupWord} from './solver/letterTree.js';
 
@@ -19,6 +19,24 @@ let board = [
     ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
     ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
     ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+]
+
+let wildcardMap = [
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 ]
 
 
@@ -86,6 +104,32 @@ export function isBoardEmpty() {
 }
 export function setBoard(b) {
     board = b;
+}
+
+export function getPlacedWilcards() {
+    let placedWilcards = [];
+    for (let y=0; y<dims; y++) {
+        for (let x=0; x<dims; x++) {
+            if (wildcardMap[y][x]) {
+                placedWilcards.push([y, x]);
+            }
+        }
+    }
+    return placedWilcards;
+}
+
+export function setPlacedWildcard(pos) {
+    wildcardMap[pos[0]][pos[1]] = 1;
+}
+
+export function resetBoard() {
+    for (let y=0; y<dims; y++) {
+        for (let x=0; x<dims; x++) {
+            board[y][x] = '';
+            wildcardMap[y][x] = 0;
+        }
+    }
+    moves = [];
 }
 
 // word object
@@ -171,208 +215,6 @@ export function getInvalidWords(hypotheticalBoard) {
     return invalidWords;
 }
 
-// function getConnectableNodes() {
-//     // start off by collecting center nodes, only (x)
-//     //
-//     //   #
-//     //  #x#
-//     //   #
-//     //
-//     // adjacent nodes/ neighbor nodes (#)
-
-//     let centralNodes = [];
-//     for (let y=0; y<dims; y++) {
-//         for (let x=0; x<dims; x++) {
-//             if (board[y][x] != '') {
-//                 centralNodes.push([y, x]);
-//             }
-//         }
-//     }
-
-//     let adjacentNodes = [...centralNodes];
-//     centralNodes.forEach(node => {
-//         let [y, x] = node;
-//         let up = [y - 1, x];
-//         let down = [y + 1, x];
-//         let left = [y, x - 1];
-//         let right = [y, x + 1];
-        
-//         if (up[0] >= 0) {adjacentNodes.push(up);}
-//         if (down[0] < dims) {adjacentNodes.push(down);}
-//         if (left[1] >= 0) {adjacentNodes.push(left);}
-//         if (right[1] < dims) {adjacentNodes.push(right);}
-//     });
-
-//     return adjacentNodes;
-// }
-
-// function arrayEquals(a, b) {
-//     return Array.isArray(a) &&
-//       Array.isArray(b) &&
-//       a.length === b.length &&
-//       a.every((val, index) => val === b[index]);
-// }
-
-// function getPlaceableWords(wordOptions) {
-//     let placeableWords = [];
-//     let boardEmpty = isBoardEmpty();
-//     let boardCenter = [Math.floor(dims / 2), Math.floor(dims / 2)];
-//     let deck = getLettersInDeck();
-
-//     let connectableNodesMap = new Map()
-//     getConnectableNodes().forEach(element => {
-//         connectableNodesMap.set(JSON.stringify(element), 0);
-//     });
-
-//     wordOptions.forEach(element => {
-//         let boardCopy = board.map(function(arr) {
-//             return arr.slice();
-//         });
-//         let deckCopy = [...deck];
-      
-//         let centralNodes = [];
-//         let lettersPlaced = []; // this is a count of letters placed from your deck, not letters that are already ont he board
-//         // check if the word can be placed
-        
-//         for (let i = 0; i < element.word.length; i++) {
-//             let letter = element.word[i];
-
-//             let y = 0;
-//             let x = 0;
-//             if (element.dir == hor) {
-//                 x = i;
-//             }
-//             else if (element.dir == ver) {
-//                 y = i;
-//             }
-            
-//             let testingTile = boardCopy[element.row + y][element.col + x];
-//             if (testingTile != '' && testingTile != letter) {
-//                 return;
-//             }
-
-//             centralNodes.push([element.row +y , element.col + x]);
-//             if (testingTile == '') {
-//                 if (deckCopy.includes(letter)) {
-//                     deckCopy.splice(deckCopy.indexOf(letter), 1);
-//                     boardCopy[element.row + y][element.col + x] = letter;
-//                     lettersPlaced.push(letter);
-//                 }
-//                 else if (deckCopy.includes(wildcard)) {
-//                     deckCopy.splice(deckCopy.indexOf(wildcard), 1);
-//                     boardCopy[element.row + y][element.col + x] = letter;
-//                     lettersPlaced.push(letter);   
-//                     element.wildcards.push(i);
-//                 } 
-//                 else {
-//                     return;
-//                 }
-//             }
-//         }
-
-//         element.lettersPlaced = lettersPlaced;
-
-//         // force words to be placed going through center when board is empty
-//         if (boardEmpty) {
-//             for (let i = 0; i < centralNodes.length; i++) {
-//                 let node = centralNodes[i];
-//                 if (arrayEquals(node, boardCenter)) {
-//                     placeableWords.push(element);
-//                     return
-//                 }
-//             }
-//         }   
-        
-//         for (let i = 0; i < centralNodes.length; i++) {
-//             let node = centralNodes[i];
-//             if (connectableNodesMap.has(JSON.stringify(node))) {
-//                 if (getInvalidWords(boardCopy).length == 0) {
-//                     placeableWords.push(element);
-//                     return;
-//                 }
-//             }
-//         }
-//     });
-    
-//     return placeableWords;
-// }
-
-// 1) traverse through each row and column adding up those letters and adding letters from the deck
-// 2) calculate all words that can be made and try to place them on the board
-// 3) calculate the score of the moves that can be placed
-// 4) sort by score
-// export function findMoves() {
-//     let connectableNodes = getConnectableNodes();
-
-//     if (getLettersInDeck().length < 1) {
-//         return [];
-//     }
-
-//     let allMoves = [];
-//     // horizontal first
-//     for (let y=0; y<dims; y++) {
-        
-//         // we check if at least one connectable node is in this row
-//         let isConnected = false;
-//         connectableNodes.forEach(connectableNode => {
-//             if (connectableNode[0] == y) {
-//                 isConnected = true;
-//             }
-//         })
-//         if (y != Math.floor(dims / 2) && !isConnected) {
-//             continue;
-//         }
-
-//         let letters = getLettersInDeck();
-//         board[y].forEach(element => {
-//             if (element != '') {
-//                 letters.push(element);
-//             }
-//         });
-//         let options = makePossibleWords(letters);
-//         options.forEach(option => {
-//             for (let i = 0; i <= dims - option.length; i++) {
-//                 allMoves.push(createWord(option, y, i, hor));
-//             }
-//         });
-//     }
-
-//     // vertically
-//     for (let x=0; x<dims; x++) {
-//         // we check if at least one connectable node is in this col
-//         let isConnected = false;
-//         connectableNodes.forEach(connectableNode => {
-//             if (connectableNode[1] == x) {
-//                 isConnected = true;
-//             }
-//         });
-//         if (x != Math.floor(dims / 2) && !isConnected) {
-//             continue;
-//         }
-
-//         let line = [];
-//         let letters = getLettersInDeck();
-//         for (let y=0; y<dims; y++) {
-//             line.push(board[y][x]);
-//         }
-//         line.forEach(element => {
-//             if (element != '') {
-//                 letters.push(element);
-//             }
-//         });
-//         let options = makePossibleWords(letters);
-//         options.forEach(option => {
-//             for (let i = 0; i <= dims - option.length; i++) {
-//                 allMoves.push(createWord(option, i, x, ver));
-//             }
-//         });
-//     }
-
-//     let placeableWords = getPlaceableWords(allMoves);
-//     let scoredMoves = calculateScores(placeableWords);
-//     moves = scoredMoves;
-//     console.log(scoredMoves);
-// }
 
 export function findMoves() {
     let placeableMoves = computeMoves(board, [...getDeck()]);
@@ -386,8 +228,11 @@ export function calculateScores(placeableWords) {
     let currentWords = getAllWords(board);
     let scoredWords = [];
     let boardEmpty = isBoardEmpty();
+    let placedWilcards = getPlacedWilcards();
 
     for (let word of placeableWords) {
+        let wildcards = [...placedWilcards];
+
         let boardCopy = board.map(function(arr) {
             return arr.slice();
         });
@@ -395,11 +240,18 @@ export function calculateScores(placeableWords) {
             let letter = word.word[i];
             if (word.dir == hor) {
                 boardCopy[word.row][word.col + i] = letter;
+                if (word.wildcards.includes(i)) {
+                    wildcards.push([word.row, word.col + i]);
+                }
             }
             else if (word.dir == ver) {
                 boardCopy[word.row + i][word.col] = letter;
+                if (word.wildcards.includes(i)) {
+                    wildcards.push([word.row + i, word.col]);
+                }
             }
         }
+
 
         for (let newWord of getAllWords(boardCopy)) {
             // skip over already existing words
@@ -425,13 +277,21 @@ export function calculateScores(placeableWords) {
                 if (newWord.dir == ver) {
                     [y, x] = [newWord.row + i, newWord.col];
                 }
-        
-                // current tile is empty so use multipliers
+                
+                let isWildcard = false;
+                for (let pos of wildcards) {
+                    if (y == pos[0] && x == pos[1]) {
+                        isWildcard = true;
+                        break;
+                    }
+                }
+                // current tile is empty so use activeactiveMultipliers
                 let letterScore = letterPoints[boardCopy[y][x]];
                 // score wildcards as 0 points
                 if (board[y][x] == '') {
-                    if (!word.wildcards.includes(i)) {
-                        let multiplier = multipliers[y][x];
+                    tilesPlaced += 1;
+                    if (!isWildcard) {
+                        let multiplier = activeMultipliers[y][x];
                         if (multiplier == doubleWordScore) {wordMultiplier *= 2;}
                         else if (multiplier == trippleWordScore) {wordMultiplier *= 3;}
                         else if (multiplier == doubleLetterScore) {letterScore *= 2;}
@@ -440,7 +300,6 @@ export function calculateScores(placeableWords) {
                     else {
                         continue;
                     }
-                    tilesPlaced += 1;
                 }
                 
                 totalScore += letterScore;

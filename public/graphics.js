@@ -1,7 +1,6 @@
-import {dims, colorConversions, multipliers, letterPoints, hor, ver, wildcard} from './constants.js';
-import {getBoard, getAllWords, getPrevSelectedTile, setSelectedTile, getSelectedTile, getTravelDirection, changeTravelDirection, setLetter, getInvalidWords, focusBoard, isBoardFocused, unfocusBoard, findMoves, getMoves, setBoard} from './board.js';
+import {dims, colorConversions, activeMultipliers, letterPoints, hor, ver, wildcard, cycleMultipliers} from './constants.js';
+import {getBoard, getPrevSelectedTile, resetBoard, setSelectedTile, getSelectedTile, getTravelDirection, changeTravelDirection, setLetter, getInvalidWords, focusBoard, isBoardFocused, unfocusBoard, findMoves, getMoves, setBoard, setPlacedWildcard, getPlacedWilcards} from './board.js';
 import {focusDeck, getDeck, getSelectedDeckTile, isDeckFocused, setDeck, typeDeckLetter, unfocusDeck} from './deck.js';
-import { makePossibleWords } from './algorithms.js';
 import { createIcon } from './sidebar.js';
 
 
@@ -13,6 +12,12 @@ board.id = 'board';
 let menu = document.createElement('div');
 menu.id = 'menu';
 
+let mobileInput = document.createElement('input');
+mobileInput.className = 'mobile-input';
+document.body.appendChild(mobileInput);
+mobileInput.addEventListener("keydown", function(event) {
+    typeLetters(event);
+}); 
 
 let showLoader = false;
 toggleLoader();
@@ -20,13 +25,41 @@ toggleLoader();
 let apiURL = 'https://api.dictionaryapi.dev/api/v2/entries/en/'
 let hoveredWord;
 
+function refreshBoard() {
+    let boardValues = getBoard();
+    let placedWildcards = getPlacedWilcards();
+
+    for (let y=0; y<dims; y++) {
+        for (let x=0; x<dims; x++) {
+            let tileId = `${y}-${x}`;
+            let tile = document.getElementById(tileId);
+            let [tileLetter, tilePoints] = tile.children;
+            
+            tileLetter.innerHTML = '';
+            tilePoints.innerHTML = '';
+
+            if (boardValues[y][x]) {
+                tileLetter.innerHTML = boardValues[y][x];
+                tilePoints.innerHTML = letterPoints[boardValues[y][x]];
+            }
+
+            for (let wildcard of placedWildcards) {
+                if (wildcard[0] == y && wildcard[1] == x) {
+                    tilePoints.innerHTML = 0;
+                }
+            }
+
+            tile.style.background = colorConversions[activeMultipliers[y][x]];
+
+        }
+    }
+}
+
 function initBoard() {
     document.body.addEventListener("keydown", function(event) {
         typeLetters(event);
     }); 
    
-    let boardValues = getBoard();
-
     for (let y=0; y<dims; y++) {
         for (let x=0; x<dims; x++) {
             let tile = document.createElement('div');
@@ -35,21 +68,19 @@ function initBoard() {
 
             let letter = document.createElement('div');
             letter.className = 'tile-letter';
-            letter.innerHTML = boardValues[y][x];
             tile.appendChild(letter);
-
+            
             let points = document.createElement('div');
-            points.className = 'tile-points'
-            points.innerHTML = letterPoints[boardValues[y][x]];
-
+            points.className = 'tile-points';
+            
             tile.appendChild(points);
-
-            // tile colors based on multipliers
-            tile.style.background = colorConversions[multipliers[y][x]];
+            
+            // tile colors based on activeMultipliers
+            tile.style.background = colorConversions[activeMultipliers[y][x]];
 
             // event listener
             tile.addEventListener("click", () => {
-                resetBackgroundColors();
+                refreshBoard();
                 highlightInvalidWords();
 
                 setSelectedTile(y, x);
@@ -147,6 +178,18 @@ function hightlightSelectedTile() {
    drawDirectionalArrow(selectedTile);
 }
 
+function toggleSave(save=false) {
+    let saved = document.getElementById('saved');
+    if (save) {
+        saved.style.backgroundImage = 'url("./images/saved.png")';
+        saved.title = 'Saved';
+    }
+    else if (!save){
+        saved.style.backgroundImage = 'url("./images/notSaved.png")';
+        saved.title = 'Not Saved';
+    }
+}
+
 function typeLetters(e) {
     let legalCharacters = 'abcdefghijklmnopqrstuvwxyzbackspacereturnenter8' + wildcard;
     let key = e.key.toLowerCase();
@@ -155,6 +198,8 @@ function typeLetters(e) {
     if (!legalCharacters.includes(key)) {
         return;
     }
+
+    toggleSave();
 
     if (key == 'backspace') {
         key = '';
@@ -222,28 +267,11 @@ function shiftSelectedTile(multiplier) {
 
 }
 
-function resetBackgroundColors() {
-    for (let y=0; y<dims; y++) {
-        for (let x=0; x<dims; x++) {
-            let id = `${y}-${x}`;
-            let element = document.getElementById(id);
-            element.style.background = colorConversions[multipliers[y][x]];
-
-            // reset to actual board values
-            // this wipes any previews of invalid words
-            let [tileLetter, tilePoints] = element.children;
-            let actualLetter = getBoard()[y][x];
-            tileLetter.innerHTML = actualLetter;
-            tilePoints.innerHTML = letterPoints[actualLetter];
-        }
-    }
-}
-
 function highlightInvalidWords() {
     // reset invalid words before redrawing
     let invalidWords = getInvalidWords(getBoard());
     if (invalidWords) {
-        resetBackgroundColors();
+        refreshBoard();
     }
     invalidWords.forEach(element => {
         for (let i=0; i < element.word.length; i++) {
@@ -262,62 +290,76 @@ function highlightInvalidWords() {
 
 function previewPossibleMove(move) {
     // reset any previous coloring before redrawing
-    resetBackgroundColors();
+    refreshBoard();
 
     for (let i=0; i < move.word.length; i++) {
         let tileId;
+        let isWildcard = false;
+
+        if (move.wildcards.includes(i)) {
+            isWildcard = true;
+        }
         if (move.dir == hor) {
             tileId = `${move.row}-${move.col + i}`
         }
         else {
             tileId = `${move.row + i}-${move.col}`
+
         }
         let tile = document.getElementById(tileId);
         tile.style.background = `rgba(0, 225, 0, 0.9)`;
 
         let [tileLetter, tilePoints] = tile.children;
         tileLetter.innerHTML = move.word[i];
-        tilePoints.innerHTML = letterPoints[move.word[i]];
+        if (!isWildcard) {
+            tilePoints.innerHTML = letterPoints[move.word[i]];
+        } 
+        else {
+            tilePoints.innerHTML = 0;
+        }
     }
 }
 
 function placeWord(move) {
-    let remainingLetters = [...getDeck()];
     for (let i=0; i < move.word.length; i++) {
         if (move.dir == hor) {
             setLetter(move.row, move.col + i, move.word[i]);
+            if (move.wildcards.includes(i)) {
+                setPlacedWildcard([move.row, move.col + i])
+            }
         }
         else {
             setLetter(move.row + i, move.col, move.word[i]);
-        }
-        // subtract used letters from deck 
-        let deck = getDeck();
-        if (deck.includes(move.word[i])) {
-            remainingLetters.splice(deck.lastIndexOf(move.word[i]), 1);
-        }
-        else if (deck.includes(wildcard)) {
-            remainingLetters.splice(deck.lastIndexOf(wildcard), 1);
+            if (move.wildcards.includes(i)) {
+                setPlacedWildcard([move.row + i, move.col])
+
+            }
         }
     }
-    // while (remainingLetters.length < 7) {
-    //     remainingLetters.push('');
-    // }
-    // setDeck(remainingLetters);
 }
 
+function refreshDeck() {
+    let deckValues = getDeck();
+    for (let i=0; i < getDeck().length; i++) {
+        let deckTile = document.getElementById(`deck-${i}`);
+        deckTile.innerHTML = deckValues[i];
+        tile.className += ' deck-tile';
+
+    }
+    let tile = document.getElementById(`deck-${getSelectedDeckTile()}`);
+    tile.className += ' deck-tile-selected';
+}
 function initDeck() {
     let deck = document.createElement('div');
     deck.id = 'deck';
-    let deckValues = getDeck();
 
     for (let i=0; i < getDeck().length; i++) {
         let deckTile = document.createElement('div');
         deckTile.className = 'deck-tile';
         deckTile.id = `deck-${i}`;
-        deckTile.innerHTML = deckValues[i];
 
         deckTile.addEventListener('click', () => {
-            resetBackgroundColors();
+            refreshBoard();
             highlightInvalidWords();
             focusDeck();
             unfocusBoard();
@@ -354,79 +396,80 @@ function updateMoveMenu() {
     moves = moves.slice(0, 300);
 
     for (let i = 0; i < moves.length; i++) {
-        let moveItem = document.createElement('div');
-        moveItem.className = 'menu-item';
-        moveItem.id = `menu-${i}`;
-
-        let ranking = document.createElement('div');
-        ranking.className = 'move-ranking';
-        ranking.innerHTML = `${i + 1}.`;
-
-        let score = document.createElement('div');
-        score.className = 'move-score';
-        score.innerHTML = moves[i].score;
-
-        let word = document.createElement('div');
-        word.className = 'move-word';
-        word.innerHTML = moves[i].word;
-
-        let pos = document.createElement('div');
-        pos.className = 'move-pos';
-        let [row, col] = [moves[i].row, moves[i].col]
-        pos.innerHTML = `(${col}, ${row})`;
-
-        let dir = document.createElement('div');
-        dir.className = 'move-dir';
-        let text = 'Horizontal';
-        if (moves[i].dir == ver) {
-            text = "Vertical";
-        }
-        dir.innerHTML = text;
-
-        let bingo = document.createElement('div');
-        bingo.className = 'move-bingo';
-        let value = 'F';
-        if (moves[i].bingo) {
-            value = "T";
-        }
-        bingo.innerHTML = value;
-
-
-        moveItem.appendChild(ranking);
-        moveItem.appendChild(word);
-        moveItem.appendChild(pos);
-        moveItem.appendChild(dir);
-        moveItem.appendChild(bingo);
-        moveItem.appendChild(score);
-
-        moveItem.addEventListener('mouseover', () => {
-            highlightInvalidWords();
-            previewPossibleMove(moves[i]);
-
-            hoveredWord = moves[i].word;
-            showLoader = true;
-            toggleLoader();
-
-            let word = document.getElementById('def-word');
-            if (word.innerHTML != moves[i].word) {
-                setTimeout(() => {
-                    if (hoveredWord == moves[i].word) {
-                        getDefinition(moves[i].word);
-                    }
-                    showLoader = false;
-                    toggleLoader();
-                }, 2000);
+            let moveItem = document.createElement('div');
+            moveItem.className = 'menu-item';
+            moveItem.id = `menu-${i}`;
+    
+            let ranking = document.createElement('div');
+            ranking.className = 'move-ranking';
+            ranking.innerHTML = `${i + 1}.`;
+    
+            let score = document.createElement('div');
+            score.className = 'move-score';
+            score.innerHTML = moves[i].score;
+    
+            let word = document.createElement('div');
+            word.className = 'move-word';
+            word.innerHTML = moves[i].word;
+    
+            let pos = document.createElement('div');
+            pos.className = 'move-pos';
+            let [row, col] = [moves[i].row, moves[i].col]
+            pos.innerHTML = `(${col}, ${row})`;
+    
+            let dir = document.createElement('div');
+            dir.className = 'move-dir';
+            let text = 'Horizontal';
+            if (moves[i].dir == ver) {
+                text = "Vertical";
             }
-        });
-
-        moveItem.addEventListener('dblclick', () => {
-            placeWord(moves[i]);
-            highlightInvalidWords();
-        })
-
-        menu.appendChild(moveItem);
+            dir.innerHTML = text;
+    
+            let bingo = document.createElement('div');
+            bingo.className = 'move-bingo';
+            let value = 'F';
+            if (moves[i].bingo) {
+                value = "T";
+            }
+            bingo.innerHTML = value;
+    
+    
+            moveItem.appendChild(ranking);
+            moveItem.appendChild(word);
+            moveItem.appendChild(pos);
+            moveItem.appendChild(dir);
+            moveItem.appendChild(bingo);
+            moveItem.appendChild(score);
+    
+            moveItem.addEventListener('mouseover', () => {
+                highlightInvalidWords();
+                previewPossibleMove(moves[i]);
+    
+                hoveredWord = moves[i].word;
+              
+    
+                let word = document.getElementById('def-word');
+                if (word.innerHTML != moves[i].word) {
+                    showLoader = true;
+                    toggleLoader();
+                    setTimeout(() => {
+                        if (hoveredWord == moves[i].word) {
+                            getDefinition(moves[i].word);
+                        }
+                        showLoader = false;
+                        toggleLoader();
+                    }, 2000);
+                }
+            });
+    
+            moveItem.addEventListener('dblclick', () => {
+                placeWord(moves[i]);
+                highlightInvalidWords();
+            })
+    
+            menu.appendChild(moveItem);
     }
-
+    
     // defenition section
     let definitions = document.createElement('div');
     definitions.className = 'definitions';
@@ -481,57 +524,39 @@ function initMoveMenu() {
     key.appendChild(col5);
     document.body.appendChild(key);
 
+    let instructions = document.createElement('div');
+    instructions.className = 'menu-instructions';
+    instructions.innerHTML = 'Enter letters and click enter to get words';
+    menu.appendChild(instructions);
+
     document.body.appendChild(menu);
+
+
     
     
 }
 
-function initResetButton() {
-    let reset = document.createElement('button');
-    let msg = document.createElement('p');
-    msg.className = 'reset-msg';
-    msg.innerHTML = 'Refresh page for changes to take affect.';
-
-    reset.innerHTML = 'Reset';
-    reset.className = 'reset';
-    reset.addEventListener('click', () => {
-        setDeck(['', '', '', '', '', '', '']);
-        setBoard([
-            ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
-            ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
-            ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
-            ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
-            ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
-            ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
-            ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
-            ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
-            ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
-            ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
-            ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
-            ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
-            ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
-            ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
-            ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
-        ]);
-        save();
-    });
-
-    document.body.appendChild(reset);
-    document.body.appendChild(msg);
-}
 
 function loadSaved() {
     let board = JSON.parse(localStorage.getItem('board'));
     let deck = JSON.parse(localStorage.getItem('deck'));
+    let wildcards = JSON.parse(localStorage.getItem('wildcards'));
 
     if (board && deck) {
         setBoard(board);
         setDeck(deck);
     }
+    if (wildcards) {
+        wildcards.forEach(element => {
+            setPlacedWildcard(element);
+        })
+    }
 }
 function save() {
     localStorage.setItem('board', JSON.stringify(getBoard()));
     localStorage.setItem('deck', JSON.stringify(getDeck()));
+    localStorage.setItem('wildcards', JSON.stringify(getPlacedWilcards()));
+    toggleSave(true);
 }
   
 
@@ -600,19 +625,48 @@ function getDefinition(newWord) {
 function initSidebar() {
     let sidebar = document.createElement('div');
     sidebar.id = 'sidebar';
-    let helpMenu = createIcon('./images/help.png', () => {
+    let helpMenu = createIcon('./images/help.png', 'Help', () => {
         let img = document.createElement('div');
         img.className = 'fullscreen';
         img.style.backgroundImage = 'url("./images/instructions.png")';
-        img.style.backgroundSize = 'cover';
+        img.style.backgroundSize = 'contain';
         document.body.appendChild(img);
 
         img.addEventListener('click', () => {
             document.body.removeChild(img);
         })
     });
+
+    let keyboard = createIcon('./images/keyboard.png', 'Open Keyboard (mobile)', () => {
+        mobileInput.focus();
+    });
+
+    let toggleBoard = createIcon('./images/icon.png', 'Change Board Layout', () => {
+        cycleMultipliers();
+        refreshBoard();
+    });
+
+    let isSaved = createIcon('./images/saved.png', 'Saved', () => {});
+    isSaved.id = 'saved';
+
+    let reset = createIcon('./images/reset.png', 'Reset', () => {
+        setDeck(['', '', '', '', '', '', '']);
+        resetBoard();
+        refreshBoard();
+        refreshDeck();
+        updateMoveMenu();
+        save();
+    })
+
     sidebar.appendChild(helpMenu);
+    sidebar.appendChild(keyboard);
+    sidebar.appendChild(toggleBoard);
+    sidebar.appendChild(reset);
+    sidebar.appendChild(isSaved);
     document.body.appendChild(sidebar);
+
+
+
 }
 
 
@@ -622,6 +676,5 @@ initSidebar();
 initBoard();
 initMoveMenu();
 initDeck();
-initResetButton();
 
 highlightInvalidWords();
