@@ -3,9 +3,10 @@ import {getBoard, getPrevSelectedTile, resetBoard, setSelectedTile, getSelectedT
 import {focusDeck, getDeck, getSelectedDeckTile, isDeckFocused, setDeck, typeDeckLetter, unfocusDeck} from './deck.js';
 import { createIcon } from './sidebar.js';
 
+let container = document.createElement('div');
+container.className = 'container';
+document.body.appendChild(container);
 
-
-// board
 let board = document.createElement('div');
 board.id = 'board';
 
@@ -14,7 +15,7 @@ menu.id = 'menu';
 
 let mobileInput = document.createElement('input');
 mobileInput.className = 'mobile-input';
-document.body.appendChild(mobileInput);
+container.appendChild(mobileInput);
 mobileInput.addEventListener("keydown", function(event) {
     typeLetters(event);
 }); 
@@ -97,7 +98,7 @@ function initBoard() {
             board.appendChild(tile);
         }
     }
-    document.body.appendChild(board);
+    container.appendChild(board);
 
 
 }
@@ -343,7 +344,7 @@ function refreshDeck() {
     for (let i=0; i < getDeck().length; i++) {
         let deckTile = document.getElementById(`deck-${i}`);
         deckTile.innerHTML = deckValues[i];
-        tile.className += ' deck-tile';
+        deckTile.className += ' deck-tile';
 
     }
     let tile = document.getElementById(`deck-${getSelectedDeckTile()}`);
@@ -376,7 +377,7 @@ function initDeck() {
         });
         deck.appendChild(deckTile);
     }
-    document.body.appendChild(deck);
+    container.appendChild(deck);
 }
 
 function scrollToMenuTop() {
@@ -390,7 +391,8 @@ function scrollToMenuTop() {
 }
 
 function updateMoveMenu() {
-    menu.innerHTML = '';
+    // menu.innerHTML = '';
+    menu.lastChild.innerHTML = '';
     
     let moves = getMoves().reverse();
     moves = moves.slice(0, 300);
@@ -491,7 +493,7 @@ function updateMoveMenu() {
     menu.appendChild(definitions);
 
 
-    document.body.appendChild(menu);
+    container.appendChild(menu);
 
 }
 function initMoveMenu() {
@@ -522,14 +524,14 @@ function initMoveMenu() {
     key.appendChild(col3);
     key.appendChild(col4);
     key.appendChild(col5);
-    document.body.appendChild(key);
+    menu.appendChild(key);
 
     let instructions = document.createElement('div');
     instructions.className = 'menu-instructions';
     instructions.innerHTML = 'Enter letters and click enter to get words';
     menu.appendChild(instructions);
 
-    document.body.appendChild(menu);
+    container.appendChild(menu);
 
 
     
@@ -630,7 +632,7 @@ function initSidebar() {
         img.className = 'fullscreen';
         img.style.backgroundImage = 'url("./images/instructions.png")';
         img.style.backgroundSize = 'contain';
-        document.body.appendChild(img);
+        container.appendChild(img);
 
         img.addEventListener('click', () => {
             document.body.removeChild(img);
@@ -663,7 +665,7 @@ function initSidebar() {
     sidebar.appendChild(toggleBoard);
     sidebar.appendChild(reset);
     sidebar.appendChild(isSaved);
-    document.body.appendChild(sidebar);
+    container.appendChild(sidebar);
 
 
 
@@ -676,5 +678,8 @@ initSidebar();
 initBoard();
 initMoveMenu();
 initDeck();
+
+refreshBoard();
+refreshDeck();
 
 highlightInvalidWords();
