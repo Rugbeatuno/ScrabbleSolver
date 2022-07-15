@@ -16,7 +16,7 @@ menu.id = 'menu';
 let mobileInput = document.createElement('input');
 mobileInput.className = 'mobile-input';
 container.appendChild(mobileInput);
-mobileInput.addEventListener("keydown", function(event) {
+mobileInput.addEventListener("keyup", function(event) {
     typeLetters(event);
 }); 
 
@@ -391,87 +391,87 @@ function scrollToMenuTop() {
 }
 
 function updateMoveMenu() {
-    // menu.innerHTML = '';
-    menu.lastChild.innerHTML = '';
-    
+    menu.innerHTML = '';
+    initMoveMenu(true);
+
     let moves = getMoves().reverse();
     moves = moves.slice(0, 300);
-
+    
     for (let i = 0; i < moves.length; i++) {
-            let moveItem = document.createElement('div');
-            moveItem.className = 'menu-item';
-            moveItem.id = `menu-${i}`;
-    
-            let ranking = document.createElement('div');
-            ranking.className = 'move-ranking';
-            ranking.innerHTML = `${i + 1}.`;
-    
-            let score = document.createElement('div');
-            score.className = 'move-score';
-            score.innerHTML = moves[i].score;
-    
-            let word = document.createElement('div');
-            word.className = 'move-word';
-            word.innerHTML = moves[i].word;
-    
-            let pos = document.createElement('div');
-            pos.className = 'move-pos';
-            let [row, col] = [moves[i].row, moves[i].col]
-            pos.innerHTML = `(${col}, ${row})`;
-    
-            let dir = document.createElement('div');
-            dir.className = 'move-dir';
-            let text = 'Horizontal';
-            if (moves[i].dir == ver) {
-                text = "Vertical";
-            }
-            dir.innerHTML = text;
-    
-            let bingo = document.createElement('div');
-            bingo.className = 'move-bingo';
-            let value = 'F';
-            if (moves[i].bingo) {
-                value = "T";
-            }
-            bingo.innerHTML = value;
-    
-    
-            moveItem.appendChild(ranking);
-            moveItem.appendChild(word);
-            moveItem.appendChild(pos);
-            moveItem.appendChild(dir);
-            moveItem.appendChild(bingo);
-            moveItem.appendChild(score);
-    
-            moveItem.addEventListener('mouseover', () => {
-                highlightInvalidWords();
-                previewPossibleMove(moves[i]);
-    
-                hoveredWord = moves[i].word;
-              
-    
-                let word = document.getElementById('def-word');
-                if (word.innerHTML != moves[i].word) {
-                    showLoader = true;
+        let moveItem = document.createElement('div');
+        moveItem.className = 'menu-item';
+        moveItem.id = `menu-${i}`;
+
+        let ranking = document.createElement('div');
+        ranking.className = 'move-ranking';
+        ranking.innerHTML = `${i + 1}.`;
+
+        let score = document.createElement('div');
+        score.className = 'move-score';
+        score.innerHTML = moves[i].score;
+
+        let word = document.createElement('div');
+        word.className = 'move-word';
+        word.innerHTML = moves[i].word;
+
+        let pos = document.createElement('div');
+        pos.className = 'move-pos';
+        let [row, col] = [moves[i].row, moves[i].col]
+        pos.innerHTML = `(${col}, ${row})`;
+
+        let dir = document.createElement('div');
+        dir.className = 'move-dir';
+        let text = 'Horizontal';
+        if (moves[i].dir == ver) {
+            text = "Vertical";
+        }
+        dir.innerHTML = text;
+
+        let bingo = document.createElement('div');
+        bingo.className = 'move-bingo';
+        let value = 'F';
+        if (moves[i].bingo) {
+            value = "T";
+        }
+        bingo.innerHTML = value;
+
+
+        moveItem.appendChild(ranking);
+        moveItem.appendChild(word);
+        moveItem.appendChild(pos);
+        moveItem.appendChild(dir);
+        moveItem.appendChild(bingo);
+        moveItem.appendChild(score);
+
+        moveItem.addEventListener('mouseover', () => {
+            highlightInvalidWords();
+            previewPossibleMove(moves[i]);
+
+            hoveredWord = moves[i].word;
+            
+
+            let word = document.getElementById('def-word');
+            if (word.innerHTML != moves[i].word) {
+                showLoader = true;
+                toggleLoader();
+                setTimeout(() => {
+                    if (hoveredWord == moves[i].word) {
+                        getDefinition(moves[i].word);
+                    }
+                    showLoader = false;
                     toggleLoader();
-                    setTimeout(() => {
-                        if (hoveredWord == moves[i].word) {
-                            getDefinition(moves[i].word);
-                        }
-                        showLoader = false;
-                        toggleLoader();
-                    }, 2000);
-                }
-            });
-    
-            moveItem.addEventListener('dblclick', () => {
-                placeWord(moves[i]);
-                highlightInvalidWords();
-            })
-    
-            menu.appendChild(moveItem);
+                }, 1500);
+            }
+        });
+
+        moveItem.addEventListener('dblclick', () => {
+            placeWord(moves[i]);
+            highlightInvalidWords();
+        })
+
+        menu.appendChild(moveItem);
     }
-    
+
     // defenition section
     let definitions = document.createElement('div');
     definitions.className = 'definitions';
@@ -496,7 +496,7 @@ function updateMoveMenu() {
     container.appendChild(menu);
 
 }
-function initMoveMenu() {
+function initMoveMenu(justKey=false) {
     let key = document.createElement('div');
     key.id = 'key';
 
@@ -529,7 +529,10 @@ function initMoveMenu() {
     let instructions = document.createElement('div');
     instructions.className = 'menu-instructions';
     instructions.innerHTML = 'Enter letters and click enter to get words';
-    menu.appendChild(instructions);
+
+    if (!justKey) {
+        menu.appendChild(instructions);
+    }
 
     container.appendChild(menu);
 
@@ -599,7 +602,8 @@ function getDefinition(newWord) {
                 for (let meaning of json.meanings) {
                     let container = document.createElement('div');
                     let partOfSpeech = document.createElement('div');
-                    let definition = document.createElement('div');
+                    let definition = document.createElement('p');
+                    definition.className = 'single-def';
                     let example = document.createElement('div');
     
                     partOfSpeech.className = 'small-text part-of-speech';
@@ -635,7 +639,7 @@ function initSidebar() {
         container.appendChild(img);
 
         img.addEventListener('click', () => {
-            document.body.removeChild(img);
+            container.removeChild(img);
         })
     });
 
@@ -652,12 +656,16 @@ function initSidebar() {
     isSaved.id = 'saved';
 
     let reset = createIcon('./images/reset.png', 'Reset', () => {
-        setDeck(['', '', '', '', '', '', '']);
-        resetBoard();
-        refreshBoard();
-        refreshDeck();
-        updateMoveMenu();
-        save();
+        if (confirm('Are you sure you want to reset? This will clear the board and your rack!')) {
+            setDeck(['', '', '', '', '', '', '']);
+            resetBoard();
+            refreshBoard();
+            refreshDeck();
+    
+            menu.innerHTML = '';
+            initMoveMenu();
+            save();
+        }
     })
 
     sidebar.appendChild(helpMenu);

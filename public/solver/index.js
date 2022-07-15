@@ -187,7 +187,7 @@ function isConnected(word, pos, dir) {
             if (inBounds(pos) && !isEmpty(pos)) {
                 return true;
             }
-            if (inBounds(pos) && boardEmpty && pos[0] == 7 && pos[1] == 7) {
+            if (inBounds(pos) && boardEmpty && y == 7 && x == 7) {
                 return true;
             }
         }
@@ -469,9 +469,8 @@ function findAllWords() {
     
                 let currentCol = col; 
                 let currentRow = row;
-                let shiftedTiles = 0;
                 let startingPositions = [];
-                while (currentCol >= 0 && currentRow >= 0 && shiftedTiles <= rack.length) {
+                while (currentCol >= 0 && currentRow >= 0) {
                     if (isEmpty([currentRow, currentCol])) {
                         startingPositions.push([currentRow, currentCol]);
                     } 
@@ -479,9 +478,9 @@ function findAllWords() {
                         startingPositions.splice(-1, 1);
                         break;
                     }
+
                     currentCol -= deltaX;
                     currentRow -= deltaY;
-                    shiftedTiles += 1;
                 }
                 for (let pos of startingPositions) {
                     // this check avoids repeating identical words several times, greatly saving on compute time
