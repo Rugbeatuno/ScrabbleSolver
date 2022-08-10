@@ -16,9 +16,6 @@ menu.id = 'menu';
 let mobileInput = document.createElement('input');
 mobileInput.className = 'mobile-input';
 container.appendChild(mobileInput);
-mobileInput.addEventListener("keyup", function(event) {
-    typeLetters(event);
-}); 
 
 let showLoader = false;
 toggleLoader();
